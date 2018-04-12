@@ -5,12 +5,17 @@ from LSTM import LSTMSentiment
 import pickle
 import preprocessing
 
+torch.cuda.set_device(0)
+
 print("Downloading data")
 train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data()
 
 # TODO: modify vocab size with actual vocab size
 print("Creating model")
 model = LSTMSentiment(embedding_dim=300, hidden_dim=128, vocab_size=300, label_size=2)
+model.word_embeddings.weight.data = inputs.vocab.vectors
+model.cuda()
+
 loss_function = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
