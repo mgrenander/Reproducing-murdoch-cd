@@ -3,34 +3,31 @@ import torch.optim as optim
 import torch.nn as nn
 from LSTM import LSTMSentiment
 import pickle
+import preprocessing
 
-def load(pic_file):
-    with open(pic_file, 'rb') as f:
-        return pickle.load(f)
-
-train = load("train.pic")
-dev = load("dev.pic")
-test = load("test.pic")
-inputs = load("inputs.pic")
-answers = load("answers.pic")
-
-print(test)
-print()
-print(inputs)
-print()
-print(answers)
-
+train, dev, test, answers, inputs = preprocessing.get_data()
 
 # TODO: modify vocab size with actual vocab size
 model = LSTMSentiment(embedding_dim=300, hidden_dim=128, vocab_size=300, label_size=2)
+loss_function = nn.NLLLoss()
+optimizer = optim.SGD(model.parameters(), lr=0.001)
 for epoch in range(5):
-    for sentence, tag in train:
+    for sent_batch, tag_batch in train:
         model.zero_grad()
         model.hidden = model.init_hidden()
 
         # Forward pass
-        label_scores = model(sentence)
+        label_scores = model(sent_batch)
 
         # Backprop
-        loss = nn.NLLLoss(label_scores, tag)
+        loss = loss_function(label_scores, tag_batch)
+        loss.backward()
+        optimizer.step()
 
+# calculate accuracy on validation set
+n_test_correct, test_loss = 0, 0
+for dev_batch_idx, dev_batch in enumerate(test):
+    answer = model(test)
+    n_test_correct += (torch.max((answer, 1))[1].view(dev_batch.label.size()).data == dev_batch.label.data).sum()
+
+dev_acc = 100. * n_test_correct / len(dev)
