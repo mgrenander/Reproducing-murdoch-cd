@@ -5,22 +5,27 @@ from LSTM import LSTMSentiment
 import pickle
 import preprocessing
 
+print("Downloading data")
 train, dev, test, answers, inputs = preprocessing.get_data()
 
 # TODO: modify vocab size with actual vocab size
+print("Creating model")
 model = LSTMSentiment(embedding_dim=300, hidden_dim=128, vocab_size=300, label_size=2)
-loss_function = nn.NLLLoss()
+loss_function = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001)
+
+print("Beginning training")
 for epoch in range(5):
-    for sent_batch, tag_batch in train:
+    print("Epoch {}".format(epoch))
+    for batch_idx, batch in enumerate(train):
         model.zero_grad()
         model.hidden = model.init_hidden()
 
         # Forward pass
-        label_scores = model(sent_batch)
+        label_scores = model(batch)
 
         # Backprop
-        loss = loss_function(label_scores, tag_batch)
+        loss = loss_function(label_scores, batch.label)
         loss.backward()
         optimizer.step()
 

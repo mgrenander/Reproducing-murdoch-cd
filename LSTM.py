@@ -12,7 +12,7 @@ class LSTMSentiment(nn.Module):
 
         self.lstm = nn.LSTM(embedding_dim, hidden_dim)
         self.hidden2label = nn.Linear(hidden_dim, label_size)
-        self.hidden = self.init_hiddent()
+        self.hidden = self.init_hidden()
 
     def init_hidden(self):
         return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim)),
