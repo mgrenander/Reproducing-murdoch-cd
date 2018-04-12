@@ -14,7 +14,7 @@ train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data()
 print("Creating model")
 model = LSTMSentiment(embedding_dim=300, hidden_dim=168, vocab_size=300, label_size=2)
 model.word_embeddings.weight.data = inputs.vocab.vectors
-model.cuda()
+model.cuda(device=2)
 
 loss_function = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
