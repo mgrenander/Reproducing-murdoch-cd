@@ -26,11 +26,15 @@ inputs.vocab.load_vectors('glove.6B.300d')
 answers.build_vocab(train)
 
 # You can use these iterators to train/test/validate the network :)
-# train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=args.batch_size, device=args.gpu)
+train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=50, device=0)
 
 # Pickle values
-pickle.dump(train, open("train.pic", 'wb'))
-pickle.dump(dev, open("dev.pic", 'wb'))
-pickle.dump(test, open("test.pic", 'wb'))
-pickle.dump(inputs, open("inputs.pic", 'wb'))
-pickle.dump(answers, open("answers.pic", 'wb'))
+def dump_pickle(obj, file):
+    with open(file, 'wb') as f:
+        pickle.dump(obj, f)
+
+dump_pickle(train_iter, "train.pic")
+dump_pickle(dev_iter, "dev.pic")
+dump_pickle(test_iter, "test.pic")
+dump_pickle(inputs, "inputs.pic")
+dump_pickle(answers, "answers.pic")
