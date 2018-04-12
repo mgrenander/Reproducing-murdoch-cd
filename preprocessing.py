@@ -33,6 +33,11 @@ def dump_pickle(obj, file):
     with open(file, 'wb') as f:
         pickle.dump(obj, f)
 
+print(type(train_iter))
+print(type(inputs))
+print(type(answers))
+
+
 dump_pickle(train_iter, "train.pic")
 dump_pickle(dev_iter, "dev.pic")
 dump_pickle(test_iter, "test.pic")
