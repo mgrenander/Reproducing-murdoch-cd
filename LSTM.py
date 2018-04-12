@@ -15,12 +15,12 @@ class LSTMSentiment(nn.Module):
         self.hidden = self.init_hidden()
 
     def init_hidden(self):
-        return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim)),
-                autograd.Variable(torch.zeros(1, 1, self.hidden_dim)))
+        return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim).cuda()),
+                autograd.Variable(torch.zeros(1, 1, self.hidden_dim)).cuda())
 
-    def forward(self, sentence):
-        embeds = self.word_embeddings(sentence)
-        lstm_out, self.hidden = self.lstm(embeds.view(len(sentence), 1, -1), self.hidden)
-        label_space = self.hidden2label(lstm_out.view(len(sentence), -1))
-        label_scores = F.log_softmax(label_space, dim=1)
-        return label_scores
+    def forward(self, batch):
+        embeds = self.word_embeddings(batch.text)
+        lstm_out, self.hidden = self.lstm(embeds, self.hidden)
+        label_space = self.hidden2label(lstm_out[-1])
+        # label_scores = F.log_softmax(label_space)
+        return label_space
