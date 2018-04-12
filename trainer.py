@@ -5,14 +5,14 @@ from LSTM import LSTMSentiment
 import pickle
 import preprocessing
 
-torch.cuda.set_device(0)
+torch.cuda.set_device(2)
 
 print("Downloading data")
 train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data()
 
 # TODO: modify vocab size with actual vocab size
 print("Creating model")
-model = LSTMSentiment(embedding_dim=300, hidden_dim=128, vocab_size=300, label_size=2)
+model = LSTMSentiment(embedding_dim=300, hidden_dim=168, vocab_size=300, label_size=2)
 model.word_embeddings.weight.data = inputs.vocab.vectors
 model.cuda()
 
@@ -35,7 +35,7 @@ for epoch in range(5):
         loss.backward()
         optimizer.step()
 
-# calculate accuracy on validation set
+# calculate accuracy on testing set
 n_test_correct, test_loss = 0, 0
 for dev_batch_idx, dev_batch in enumerate(test_iter):
     answer = model(test_iter)
