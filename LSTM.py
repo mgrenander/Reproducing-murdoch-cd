@@ -15,8 +15,8 @@ class LSTMSentiment(nn.Module):
         self.hidden = self.init_hidden()
 
     def init_hidden(self):
-        return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim).cuda(device=2)),
-                autograd.Variable(torch.zeros(1, 1, self.hidden_dim)).cuda(device=2))
+        return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim).cuda(device=0)),
+                autograd.Variable(torch.zeros(1, 1, self.hidden_dim)).cuda(device=0))
 
     def forward(self, batch):
         embeds = self.word_embeddings(batch.text)

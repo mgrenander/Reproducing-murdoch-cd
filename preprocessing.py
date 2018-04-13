@@ -27,7 +27,7 @@ def get_data():
     answers.build_vocab(train)
 
     # You can use these iterators to train/test/validate the network :)
-    train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=1, device=2)
+    train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=1, device=0)
     return train_iter, dev_iter, test_iter, answers, inputs
 
 # Pickle values
