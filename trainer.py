@@ -2,30 +2,31 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from LSTM import LSTMSentiment
-import pickle
 import preprocessing
+import sys
+from tqdm import tqdm
 
-torch.cuda.set_device(2)
+# Select GPU we will use
+DEVICE = sys.argv[1]
+torch.cuda.set_device(DEVICE)
 
 print("Downloading data")
-train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data()
+train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data(device=DEVICE)
 
-# TODO: modify vocab size with actual vocab size
 print("Creating model")
-model = LSTMSentiment(embedding_dim=300, hidden_dim=168, vocab_size=300, label_size=2)
+model = LSTMSentiment(embedding_dim=300, hidden_dim=168, vocab_size=300, label_size=2, gpu_device=DEVICE)
 model.word_embeddings.weight.data = inputs.vocab.vectors
-model.cuda(device=2)
+model.cuda(device=DEVICE)
 
 loss_function = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 print("Beginning training")
-for epoch in range(5):
+for epoch in tqdm(range(5)):
     train_iter.init_epoch()
     print("Epoch {}".format(epoch))
-    for batch_idx, batch in enumerate(train_iter):
+    for batch in tqdm(train_iter):
         model.train(); optimizer.zero_grad()
-        model.hidden = model.init_hidden()
 
         # Forward pass
         label_scores = model(batch)

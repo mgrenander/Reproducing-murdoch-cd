@@ -1,9 +1,6 @@
 from torchtext import data, datasets
-import torch
-import os
-import pickle
 
-def get_data():
+def get_data(device):
     # preserves case of words
     inputs = data.Field(lower='preserve-case')
 
@@ -27,22 +24,5 @@ def get_data():
     answers.build_vocab(train)
 
     # You can use these iterators to train/test/validate the network :)
-    train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=1, device=2)
+    train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=50, device=device)
     return train_iter, dev_iter, test_iter, answers, inputs
-
-# Pickle values
-# def dump_pickle(obj, file):
-#     with open(file, 'wb') as f:
-#         pickle.dump(obj, f)
-#
-# print(type(train_iter))
-# print(type(inputs))
-# print(type(answers))
-#
-#
-# dump_pickle(train_iter, "train.pic")
-# dump_pickle(dev_iter, "dev.pic")
-# dump_pickle(test_iter, "test.pic")
-# dump_pickle(inputs, "inputs.pic")
-# dump_pickle(answers, "answers.pic")
-

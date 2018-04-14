@@ -5,8 +5,9 @@ import torch.nn.functional as F
 
 class LSTMSentiment(nn.Module):
 
-    def __init__(self, embedding_dim, hidden_dim, vocab_size, label_size):
+    def __init__(self, embedding_dim, hidden_dim, vocab_size, label_size, gpu_device):
         super(LSTMSentiment, self).__init__()
+        self.gpu_device = gpu_device
         self.hidden_dim = hidden_dim
         self.word_embeddings = nn.Embedding(vocab_size, embedding_dim)
 
@@ -15,10 +16,13 @@ class LSTMSentiment(nn.Module):
         self.hidden = self.init_hidden()
 
     def init_hidden(self):
-        return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim).cuda(device=2)),
-                autograd.Variable(torch.zeros(1, 1, self.hidden_dim)).cuda(device=2))
+        return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim).cuda(device=self.gpu_device)),
+                autograd.Variable(torch.zeros(1, 1, self.hidden_dim)).cuda(device=self.gpu_device))
 
     def forward(self, batch):
+        # Clear hidden state
+        self.hidden = self.init_hidden()
+
         embeds = self.word_embeddings(batch.text)
         lstm_out, self.hidden = self.lstm(embeds, self.hidden)
         label_space = self.hidden2label(lstm_out[-1])
