@@ -22,11 +22,13 @@ loss_function = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 print("Beginning training")
+early_stop_test = 0
 for epoch in tqdm(range(5)):
     train_iter.init_epoch()
     print("Epoch {}".format(epoch))
     for batch in tqdm(train_iter):
-        model.train(); optimizer.zero_grad()
+        model.train()
+        optimizer.zero_grad()
 
         # Forward pass
         label_scores = model(batch)
@@ -36,11 +38,14 @@ for epoch in tqdm(range(5)):
         loss.backward()
         optimizer.step()
 
+    # Early stopping: save model if this one was better
+
+
 # calculate accuracy on testing set
-n_test_correct, test_loss = 0, 0
-for dev_batch_idx, dev_batch in enumerate(test_iter):
-    answer = model(test_iter)
-    n_test_correct += (torch.max((answer, 1))[1].view(dev_batch.label.size()).data == dev_batch.label.data).sum()
+n_test_correct = 0
+for test_batch in test_iter:
+    answer = model(test_batch)
+    n_test_correct += (torch.max((answer, 1))[1].view(test_batch.label.size()).data == test_batch.label.data).sum()
 
 test_acc = 100. * n_test_correct / len(test_iter)
 print(test_acc)
