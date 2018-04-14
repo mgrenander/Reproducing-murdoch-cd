@@ -18,7 +18,7 @@ torch.cuda.set_device(DEVICE)
 RESUME_CKPT = bool(int(sys.argv[2]))
 
 ###########################################
-# TODO: remove when we have preprocessing
+# PREPROCESSING
 print("Downloading data")
 # train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data(device=DEVICE)
 
@@ -74,8 +74,12 @@ for epoch in tqdm_epoch:
         if id % (len(tqdm_batch)/10) == 0:
             tqdm_batch.set_postfix(loss=loss.data[0])
 
+    print("Finished training for epoch {}".format(epoch))
+
     # Early stopping: save model if this one was better
     num_correct = 0
+    model.eval()
+    dev_iter.init_epoch()
     for val_batch in dev_iter:
         answer = model(val_batch)
         num_correct += (torch.max((answer, 1))[1].view(val_batch.label.size()).data == val_batch.label.data).sum()
