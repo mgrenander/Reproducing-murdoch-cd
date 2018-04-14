@@ -7,6 +7,9 @@ import sys
 import os
 from tqdm import tqdm
 
+from torchtext import data
+from torchtext import datasets
+
 # Select GPU we will use
 DEVICE = int(sys.argv[1])
 torch.cuda.set_device(DEVICE)
@@ -14,9 +17,25 @@ torch.cuda.set_device(DEVICE)
 # Select to resume checkpoint or not
 RESUME_CKPT = bool(int(sys.argv[2]))
 
+###########################################
+# TODO: remove when we have preprocessing
 print("Downloading data")
-train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data(device=DEVICE)
+# train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data(device=DEVICE)
 
+inputs = data.Field(lower='preserve-case')
+answers = data.Field(sequential=False, unk_token=None)
+
+train, dev, test = datasets.SST.splits(inputs, answers, fine_grained = False, train_subtrees = True,
+										filter_pred=lambda ex: ex.label != 'neutral')
+inputs.build_vocab(train, dev, test)
+
+inputs.vocab.load_vectors('glove.6B.300d')
+answers.build_vocab(train)
+
+train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=50, device=DEVICE)
+
+
+############################################
 print("Creating model")
 model = LSTMSentiment(embedding_dim=300, hidden_dim=168, vocab_size=300, label_size=2, gpu_device=DEVICE)
 model.word_embeddings.weight.data = inputs.vocab.vectors
@@ -37,7 +56,6 @@ early_stop_test = 0
 tqdm_epoch = tqdm(range(5), desc="Epoch")
 for epoch in tqdm_epoch:
     train_iter.init_epoch()
-    print("Epoch {}".format(epoch))
 
     tqdm_batch = tqdm(train_iter, desc="Batch")
     loss = None
