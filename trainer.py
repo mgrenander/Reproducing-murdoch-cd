@@ -4,11 +4,15 @@ import torch.nn as nn
 from LSTM import LSTMSentiment
 import preprocessing
 import sys
+import os
 from tqdm import tqdm
 
 # Select GPU we will use
 DEVICE = int(sys.argv[1])
 torch.cuda.set_device(DEVICE)
+
+# Select to resume checkpoint or not
+RESUME_CKPT = bool(sys.argv[2])
 
 print("Downloading data")
 train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data(device=DEVICE)
@@ -17,6 +21,13 @@ print("Creating model")
 model = LSTMSentiment(embedding_dim=300, hidden_dim=168, vocab_size=300, label_size=2, gpu_device=DEVICE)
 model.word_embeddings.weight.data = inputs.vocab.vectors
 model.cuda(device=DEVICE)
+
+# Load previously checkpointed model if it exists
+model_path = "data/model.pt"
+if os.path.exists(model_path) and RESUME_CKPT:
+    print("Loading previously stored model")
+    model = torch.load(model_path)
+
 
 loss_function = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
