@@ -49,13 +49,3 @@ for epoch in tqdm(range(5)):
         # Save model
         print("Found new best model with dev accuracy: {}".format(val_acc))
         torch.save("data/model.pt", model)
-
-
-# calculate accuracy on testing set
-n_test_correct = 0
-for test_batch in test_iter:
-    answer = model(test_batch)
-    n_test_correct += (torch.max((answer, 1))[1].view(test_batch.label.size()).data == test_batch.label.data).sum()
-
-test_acc = 100. * n_test_correct / len(test_iter)
-print(test_acc)
