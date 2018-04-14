@@ -32,7 +32,7 @@ inputs.build_vocab(train, dev, test)
 inputs.vocab.load_vectors('glove.6B.300d')
 answers.build_vocab(train)
 
-train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=50, device=DEVICE)
+train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=50, repeat=False, device=DEVICE)
 
 
 ############################################
