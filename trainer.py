@@ -12,7 +12,7 @@ DEVICE = int(sys.argv[1])
 torch.cuda.set_device(DEVICE)
 
 # Select to resume checkpoint or not
-RESUME_CKPT = bool(sys.argv[2])
+RESUME_CKPT = bool(int(sys.argv[2]))
 
 print("Downloading data")
 train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data(device=DEVICE)
