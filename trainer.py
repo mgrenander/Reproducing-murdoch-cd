@@ -7,7 +7,7 @@ import sys
 from tqdm import tqdm
 
 # Select GPU we will use
-DEVICE = sys.argv[1]
+DEVICE = int(sys.argv[1])
 torch.cuda.set_device(DEVICE)
 
 print("Downloading data")
@@ -39,6 +39,16 @@ for epoch in tqdm(range(5)):
         optimizer.step()
 
     # Early stopping: save model if this one was better
+    num_correct = 0
+    for val_batch in dev_iter:
+        answer = model(val_batch)
+        num_correct += (torch.max((answer, 1))[1].view(val_batch.label.size()).data == val_batch.label.data).sum()
+    val_acc = 100. * num_correct / len(dev_iter)
+
+    if val_acc > early_stop_test:
+        # Save model
+        print("Found new best model with dev accuracy: {}".format(val_acc))
+        torch.save("data/model.pt", model)
 
 
 # calculate accuracy on testing set

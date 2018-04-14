@@ -15,13 +15,13 @@ class LSTMSentiment(nn.Module):
         self.hidden2label = nn.Linear(hidden_dim, label_size)
         self.hidden = self.init_hidden()
 
-    def init_hidden(self):
-        return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim).cuda(device=self.gpu_device)),
-                autograd.Variable(torch.zeros(1, 1, self.hidden_dim)).cuda(device=self.gpu_device))
+    def init_hidden(self, batch_size):
+        return (autograd.Variable(torch.zeros(1, batch_size, self.hidden_dim).cuda(device=self.gpu_device)),
+                autograd.Variable(torch.zeros(1, batch_size, self.hidden_dim)).cuda(device=self.gpu_device))
 
     def forward(self, batch):
         # Clear hidden state
-        self.hidden = self.init_hidden()
+        self.hidden = self.init_hidden(batch.text.size()[1])
 
         embeds = self.word_embeddings(batch.text)
         lstm_out, self.hidden = self.lstm(embeds, self.hidden)
