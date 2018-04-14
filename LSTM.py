@@ -21,9 +21,6 @@ class LSTMSentiment(nn.Module):
 
     def forward(self, batch):
         # Clear hidden state
-
-    def forward(self, batch):
-        # Clear hidden state
         self.hidden = self.init_hidden()
 
         embeds = self.word_embeddings(batch.text)
