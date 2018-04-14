@@ -1,7 +1,7 @@
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from LSTM import LSTMSentiment
+from model import LSTMSentiment
 import preprocessing
 import sys
 import os
