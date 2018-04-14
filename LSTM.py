@@ -13,7 +13,6 @@ class LSTMSentiment(nn.Module):
 
         self.lstm = nn.LSTM(embedding_dim, hidden_dim)
         self.hidden2label = nn.Linear(hidden_dim, label_size)
-        self.hidden = self.init_hidden()
 
     def init_hidden(self, batch_size):
         return (autograd.Variable(torch.zeros(1, batch_size, self.hidden_dim).cuda(device=self.gpu_device)),
