@@ -23,10 +23,14 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 print("Beginning training")
 early_stop_test = 0
-for epoch in tqdm(range(5)):
+tqdm_epoch = tqdm(range(5), desc="Epoch")
+for epoch in tqdm_epoch:
     train_iter.init_epoch()
     print("Epoch {}".format(epoch))
-    for batch in tqdm(train_iter):
+
+    tqdm_batch = tqdm(train_iter, desc="Batch")
+    loss = None
+    for batch in tqdm_batch:
         model.train()
         optimizer.zero_grad()
 
@@ -38,12 +42,16 @@ for epoch in tqdm(range(5)):
         loss.backward()
         optimizer.step()
 
+        tqdm_batch.set_postfix(loss=loss)
+
     # Early stopping: save model if this one was better
     num_correct = 0
     for val_batch in dev_iter:
         answer = model(val_batch)
         num_correct += (torch.max((answer, 1))[1].view(val_batch.label.size()).data == val_batch.label.data).sum()
     val_acc = 100. * num_correct / len(dev_iter)
+
+    tqdm_epoch.set_postfix(loss=loss, acc=val_acc)
 
     if val_acc > early_stop_test:
         # Save model
