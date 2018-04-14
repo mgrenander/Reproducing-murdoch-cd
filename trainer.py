@@ -41,7 +41,7 @@ for epoch in tqdm_epoch:
 
     tqdm_batch = tqdm(train_iter, desc="Batch")
     loss = None
-    for batch in tqdm_batch:
+    for id, batch in enumerate(tqdm_batch):
         model.train()
         optimizer.zero_grad()
 
@@ -53,7 +53,8 @@ for epoch in tqdm_epoch:
         loss.backward()
         optimizer.step()
 
-        tqdm_batch.set_postfix(loss=loss)
+        if id % (len(tqdm_batch)/10) == 0:
+            tqdm_batch.set_postfix(loss=loss.data[0])
 
     # Early stopping: save model if this one was better
     num_correct = 0
