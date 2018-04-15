@@ -3,3 +3,4 @@
 __pycache__/
 .data
 .vector_cache/
+model.pt
