@@ -10,6 +10,8 @@ from tqdm import tqdm
 from torchtext import data
 from torchtext import datasets
 
+import evaluate_lstm
+
 # Select GPU we will use
 DEVICE = int(sys.argv[1])
 torch.cuda.set_device(DEVICE)
@@ -82,7 +84,7 @@ for epoch in tqdm_epoch:
     dev_iter.init_epoch()
     for val_batch in dev_iter:
         answer = model(val_batch)
-        num_correct += (torch.max((answer, 1))[1].view(val_batch.label.size()).data == val_batch.label.data).sum()
+        num_correct += (torch.max(answer, 1)[1].view(val_batch.label.size()).data == val_batch.label.data).sum()
     val_acc = 100. * num_correct / len(dev_iter)
 
     tqdm_epoch.set_postfix(loss=loss, acc=val_acc)
@@ -91,3 +93,6 @@ for epoch in tqdm_epoch:
         # Save model
         print("Found new best model with dev accuracy: {}".format(val_acc))
         torch.save("data/model.pt", model)
+
+# Evaluate test data
+evaluate_lstm.evaluate()
