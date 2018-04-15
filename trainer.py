@@ -2,7 +2,6 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from model import LSTMSentiment
-import preprocessing
 import sys
 import os
 from tqdm import tqdm
@@ -10,6 +9,8 @@ from tqdm import tqdm
 from torchtext import data
 from torchtext import datasets
 
+#########################################
+# INITIALIZING
 # Select GPU we will use
 DEVICE = int(sys.argv[1])
 torch.cuda.set_device(DEVICE)
@@ -19,23 +20,17 @@ RESUME_CKPT = bool(int(sys.argv[2]))
 
 ###########################################
 # PREPROCESSING
-print("Downloading data")
-# train_iter, dev_iter, test_iter, answers, inputs = preprocessing.get_data(device=DEVICE)
-
+print("Downloading and preprocessing data")
 inputs = data.Field(lower='preserve-case')
 answers = data.Field(sequential=False, unk_token=None)
-
-train, dev, test = datasets.SST.splits(inputs, answers, fine_grained = False, train_subtrees = True,
-										filter_pred=lambda ex: ex.label != 'neutral')
+train, dev, test = datasets.SST.splits(inputs, answers, fine_grained = False, train_subtrees = True, filter_pred=lambda ex: ex.label != 'neutral')
 inputs.build_vocab(train, dev, test)
-
 inputs.vocab.load_vectors('glove.6B.300d')
 answers.build_vocab(train)
-
 train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=50, repeat=False, device=DEVICE)
 
-
 ############################################
+# CREATING MODEL
 print("Creating model")
 model = LSTMSentiment(embedding_dim=300, hidden_dim=168, vocab_size=300, label_size=2, gpu_device=DEVICE)
 model.word_embeddings.weight.data = inputs.vocab.vectors
@@ -47,10 +42,12 @@ if os.path.exists(model_path) and RESUME_CKPT:
     print("Loading previously stored model")
     model = torch.load(model_path)
 
-
 loss_function = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+
+#############################################
+# TRAINING
 print("Beginning training")
 early_stop_test = 0
 tqdm_epoch = tqdm(range(5), desc="Epoch")
@@ -59,7 +56,7 @@ for epoch in tqdm_epoch:
 
     tqdm_batch = tqdm(train_iter, desc="Batch")
     loss = None
-    for id, batch in enumerate(tqdm_batch):
+    for b_id, batch in enumerate(tqdm_batch):
         model.train()
         optimizer.zero_grad()
 
@@ -71,10 +68,8 @@ for epoch in tqdm_epoch:
         loss.backward()
         optimizer.step()
 
-        if id % (len(tqdm_batch)/10) == 0:
+        if b_id % (len(tqdm_batch)/10) == 0:
             tqdm_batch.set_postfix(loss=loss.data[0])
-
-    print("Finished training for epoch {}".format(epoch))
 
     # Early stopping: save model if this one was better
     num_correct = 0
@@ -89,12 +84,15 @@ for epoch in tqdm_epoch:
 
     if val_acc > early_stop_test:
         # Save model
-        print("Found new best model with dev accuracy: {}".format(val_acc))
         early_stop_test = val_acc
         torch.save(model, model_path)
 
-# Evaluate on test
+###########################################
+# TEST EVALUATION
+print("Evaluating on test data")
 num_correct = 0
+model.eval()
+test_iter.init_epoch()
 for test_batch in test_iter:
     answer = model(test_batch)
     num_correct += (torch.max(answer, 1)[1].view(test_batch.label.size()).data == test_batch.label.data).sum()
