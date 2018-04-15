@@ -1,5 +1,6 @@
 from torchtext import data, datasets
 
+# Note: if data is already downloaded, it will be cached and not redownloaded!
 def get_data(device):
     # preserves case of words
     inputs = data.Field(lower='preserve-case')
@@ -24,5 +25,5 @@ def get_data(device):
     answers.build_vocab(train)
 
     # You can use these iterators to train/test/validate the network :)
-    train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=50, device=device)
+    train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=50, repeat=False, device=device)
     return train_iter, dev_iter, test_iter, answers, inputs
