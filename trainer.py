@@ -71,21 +71,22 @@ for epoch in tqdm_epoch:
         if b_id % (len(tqdm_batch)/10) == 0:
             tqdm_batch.set_postfix(loss=loss.data[0])
 
-    # Early stopping: save model if this one was better
-    num_correct = 0
-    model.eval()
-    dev_iter.init_epoch()
-    for val_batch in dev_iter:
-        answer = model(val_batch)
-        num_correct += (torch.max(answer, 1)[1].view(val_batch.label.size()).data == val_batch.label.data).sum()
-    val_acc = 100. * num_correct / len(dev)
+        # Early stopping: every x iterations we will check on validation error - save model if this one was better
+        if b_id % 400 == 0 or b_id == len(tqdm_batch)-1:
+            num_correct = 0
+            model.eval()
+            dev_iter.init_epoch()
+            for val_batch in dev_iter:
+                answer = model(val_batch)
+                num_correct += (torch.max(answer, 1)[1].view(val_batch.label.size()).data == val_batch.label.data).sum()
+            val_acc = 100. * num_correct / len(dev)
 
-    tqdm_epoch.set_postfix(loss=loss.data[0], acc=val_acc)
+            tqdm_epoch.set_postfix(loss=loss.data[0], acc=val_acc)
 
-    if val_acc > early_stop_test:
-        # Save model
-        early_stop_test = val_acc
-        torch.save(model, model_path)
+            if val_acc > early_stop_test:
+                # Save model
+                early_stop_test = val_acc
+                torch.save(model, model_path)
 
 ###########################################
 # TEST EVALUATION
