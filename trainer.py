@@ -90,6 +90,7 @@ for epoch in tqdm_epoch:
     if val_acc > early_stop_test:
         # Save model
         print("Found new best model with dev accuracy: {}".format(val_acc))
+        early_stop_test = val_acc
         torch.save(model, model_path)
 
 # Evaluate on test
