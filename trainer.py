@@ -44,7 +44,7 @@ model.word_embeddings.weight.data = inputs.vocab.vectors
 model.cuda(device=DEVICE)
 
 # Load previously checkpointed model if it exists
-model_path = "data/model.pt"
+model_path = "model.pt"
 if os.path.exists(model_path) and RESUME_CKPT:
     print("Loading previously stored model")
     model = torch.load(model_path)
@@ -85,14 +85,14 @@ for epoch in tqdm_epoch:
     for val_batch in dev_iter:
         answer = model(val_batch)
         num_correct += (torch.max(answer, 1)[1].view(val_batch.label.size()).data == val_batch.label.data).sum()
-    val_acc = 100. * num_correct / len(dev_iter)
+    val_acc = 100. * num_correct / len(dev)
 
-    tqdm_epoch.set_postfix(loss=loss, acc=val_acc)
+    tqdm_epoch.set_postfix(loss=loss.data[0], acc=val_acc)
 
     if val_acc > early_stop_test:
         # Save model
         print("Found new best model with dev accuracy: {}".format(val_acc))
-        torch.save("data/model.pt", model)
+        torch.save(model_path, model)
 
 # Evaluate test data
 evaluate_lstm.evaluate()
