@@ -23,7 +23,7 @@ class LogisticRegression(nn.Module):
 
         # Clear hidden state
         # embeds = self.word_embeddings(batch.text)
-        return self.linear(batch.text)
+        return self.linear(batch.text.type('torch.cuda.FloatTensor'))
 
 ###########################################
 # PREPROCESSING
@@ -53,7 +53,7 @@ for epoch in tqdm_epoch:
         model.train()
         opt.zero_grad()
 
-        log_probs = model(batch.type('torch.cuda.FloatTensor'))
+        log_probs = model(batch)
 
         # Compute the loss and gradients and update the parameters by opt.step()
         loss = loss_fn(log_probs, batch.label)
