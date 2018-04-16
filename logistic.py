@@ -39,7 +39,7 @@ train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test),
 ############################################
 print("Creating model")
 model = LogisticRegression(embedding_dim=300, vocab_size=300, label_size=2, gpu_device=DEVICE)
-model.word_embeddings.weight.data = inputs.vocab.vectors
+# model.word_embeddings.weight.data = inputs.vocab.vectors
 model.cuda(device=DEVICE)
 loss_fn = nn.CrossEntropyLoss()
 opt = torch.optim.Adam(model.parameters(),lr=0.001)
@@ -53,7 +53,7 @@ for epoch in tqdm_epoch:
         model.train()
         opt.zero_grad()
 
-        log_probs = model(batch)
+        log_probs = model(batch.type('torch.cuda.FloatTensor'))
 
         # Compute the loss and gradients and update the parameters by opt.step()
         loss = loss_fn(log_probs, batch.label)
