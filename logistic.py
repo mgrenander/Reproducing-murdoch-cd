@@ -54,7 +54,7 @@ tqdm_epoch = tqdm(range(100), desc="Epoch")
 for epoch in tqdm_epoch:
     train_iter.init_epoch()
     tqdm_batch = tqdm(train_iter, desc="Batch")
-    for _,batch in tqdm_batch:
+    for batch in tqdm_batch:
         # Clear gradient before each new instance
         model.train()
         opt.zero_grad()
@@ -77,3 +77,6 @@ for test_batch in test_iter:
 
 test_acc = 100. * num_correct / len(test)
 print("Test accuracy: {}".format(test_acc))
+
+# Save model
+torch.save(model, "logis-model.pt")
