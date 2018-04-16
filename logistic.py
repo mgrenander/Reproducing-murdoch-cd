@@ -11,25 +11,19 @@ DEVICE = int(sys.argv[1])
 torch.cuda.set_device(DEVICE)
 
 class LogisticRegression(nn.Module):
-    def __init__(self, embedding_dim, hidden_dim, vocab_size, label_size, gpu_device):
+    def __init__(self, embedding_dim, vocab_size, label_size, gpu_device):
         super(LogisticRegression, self).__init__()
         self.gpu_device = gpu_device
-        self.hidden_dim = hidden_dim
-        self.word_embeddings = nn.Embedding(vocab_size, embedding_dim)
+        # self.word_embeddings = nn.Embedding(vocab_size, embedding_dim)
         self.linear = nn.Linear(vocab_size, label_size)
-
-    def init_hidden(self, batch_size):
-        return (autograd.Variable(torch.zeros(1, batch_size, self.hidden_dim).cuda(device=self.gpu_device)),
-                autograd.Variable(torch.zeros(1, batch_size, self.hidden_dim)).cuda(device=self.gpu_device))
 
     def forward(self, batch):
         # Pass the input through the linear layer,
         # then pass that through log_softmax.
 
         # Clear hidden state
-        self.hidden = self.init_hidden(batch.text.size()[1])
-        embeds = self.word_embeddings(batch.text)
-        return self.linear(embeds)
+        # embeds = self.word_embeddings(batch.text)
+        return self.linear(batch.text)
 
 ###########################################
 # PREPROCESSING
@@ -44,7 +38,7 @@ train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test),
 
 ############################################
 print("Creating model")
-model = LogisticRegression(embedding_dim=300, hidden_dim=168, vocab_size=300, label_size=2, gpu_device=DEVICE)
+model = LogisticRegression(embedding_dim=300, vocab_size=300, label_size=2, gpu_device=DEVICE)
 model.word_embeddings.weight.data = inputs.vocab.vectors
 model.cuda(device=DEVICE)
 loss_fn = nn.CrossEntropyLoss()
