@@ -1,201 +1,79 @@
-
-# coding: utf-8
-
-# In[1]:
-
-
-from __future__ import print_function
-
 from torchtext import data, datasets
 import torch
-import os
-from collections import Counter
 import torch.nn.functional as F
-import torch.autograd as autograd
 import torch.nn as nn
+from tqdm import tqdm
+import torch.autograd as autograd
+import sys
 
+# GPU device
+DEVICE = int(sys.argv[1])
+torch.cuda.set_device(DEVICE)
 
-# ## Preprocessing SST into Glove Vectors
-
-# In[2]:
-
-
-# preserves case of words
-inputs = data.Field(lower='preserve-case')
-
-# No tokenization applied because the data is not seq
-# unk_token=None: ignore out of vocabulary tokens, since these are grades
-answers = data.Field(sequential=False, unk_token=None) # y: floats
-
-# fine_grained=False - use the following grade mapping { 0,1 -> negativ; 2 -> neutral; 3,4 -> positive }
-# filter=... - remove the neutral class to reduce the problem to binary classification
-# train_subtrees=False - Use only complete review instead of also using subsentences (subtrees)
-train, dev, test = datasets.SST.splits(inputs, answers, fine_grained = False, train_subtrees = True,
-                                       filter_pred=lambda ex: ex.label != 'neutral')
-# build the initial vocabulary from the SST dataset
-inputs.build_vocab(train, dev, test)
-
-# then enhance it with the pre-trained glove model 
-inputs.vocab.load_vectors('glove.6B.300d')
-
-# build the vocab for the labels (only consists of 'positive','negative')
-answers.build_vocab(train)
-
-# You can use these iterators to train/test/validate the network :)
-train_iter, dev_iter, test_iter = data.BucketIterator.splits(
-        (train, dev, test), batch_size=100, device=-1)
-
-
-# ## Bag of Words Representation
-
-# In[4]:
-
-
-def preprocessingBOW(batch,vocab,istrain):
-    tensor = torch.FloatTensor(len(vocab),len(batch))
-    tensor.zero_()
-    
-    for i in xrange(len(batch)):
-        # update frequency
-        c = Counter()
-        c.update(batch[i])
-        
-        localtensor = torch.FloatTensor(len(vocab))
-        localtensor.zero_()
-        
-        localtensor[c.keys()] = torch.FloatTensor(c.values())
-        tensor[:,i] = localtensor
-    
-    return tensor
-
-inputsBOW = data.Field(lower='preserve-case', tensor_type=torch.FloatTensor, postprocessing=preprocessingBOW)
-
-# No tokenization applied because the data is not seq
-# unk_token=None: ignore out of vocabulary tokens, since these are grades
-answersBOW = data.Field(sequential=False, unk_token=None)
-
-# fine_grained=False - use the following grade mapping { 0,1 -> negativ; 2 -> neutral; 3,4 -> positive }
-# filter=... - remove the neutral class to reduce the problem to binary classification
-# train_subtrees=False - Use only complete review instead of also using subsentences (subtrees)
-trainBOW, devBOW, testBOW = datasets.SST.splits(inputsBOW, answersBOW, fine_grained = False, train_subtrees = True,
-                                       filter_pred=lambda ex: ex.label != 'neutral')
-# build the initial vocabulary from the SST dataset
-inputsBOW.build_vocab(trainBOW, devBOW, testBOW)
-
-# build the vocab for the labels (only consists of 'positive','negative')
-answersBOW.build_vocab(trainBOW)
-
-
-# ## Logistic Regression Classifier
-
-# In[5]:
-
-
-class LogisticRegression(nn.Module): 
-    
-    def __init__(self, num_labels, vocab_size):
+class LogisticRegression(nn.Module):
+    def __init__(self, embedding_dim, hidden_dim, vocab_size, label_size, gpu_device):
         super(LogisticRegression, self).__init__()
-        self.linear = nn.Linear(vocab_size, num_labels)
-        
-    def forward(self, bow_vector):
+        self.gpu_device = gpu_device
+        self.hidden_dim = hidden_dim
+        self.word_embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.linear = nn.Linear(vocab_size, label_size)
+
+    def init_hidden(self, batch_size):
+        return (autograd.Variable(torch.zeros(1, batch_size, self.hidden_dim).cuda(device=self.gpu_device)),
+                autograd.Variable(torch.zeros(1, batch_size, self.hidden_dim)).cuda(device=self.gpu_device))
+
+    def forward(self, batch):
         # Pass the input through the linear layer,
         # then pass that through log_softmax.
-        # Many non-linearities and other functions are in torch.nn.functional
-        return F.log_softmax(self.linear(bow_vector), dim=1)
 
+        # Clear hidden state
+        self.hidden = self.init_hidden(batch.text.size()[1])
+        embeds = self.word_embeddings(batch.text)
+        return self.linear(embeds)
 
-# ### Setting Parameters
+###########################################
+# PREPROCESSING
+print("Downloading and preprocessing data")
+inputs = data.Field(lower='preserve-case')
+answers = data.Field(sequential=False, unk_token=None)
+train, dev, test = datasets.SST.splits(inputs, answers, fine_grained = False, train_subtrees = True, filter_pred=lambda ex: ex.label != 'neutral')
+inputs.build_vocab(train, dev, test)
+inputs.vocab.load_vectors('glove.6B.300d')
+answers.build_vocab(train)
+train_iter, dev_iter, test_iter = data.BucketIterator.splits((train, dev, test), batch_size=50, repeat=False, device=DEVICE)
 
-# In[79]:
-
-
-num_labels = 2
-vocab_size = len(inputsBOW.vocab)
-model = LogisticRegression(num_labels, vocab_size)
-learning_rate = 0.0001
-num_epochs = 100
-
-
-# In[80]:
-
-
-train_iter, dev_iter, test_iter = data.BucketIterator.splits(
-        (trainBOW, devBOW, testBOW), repeat=False, batch_size=100, device=-1)
-
+############################################
+print("Creating model")
+model = LogisticRegression(embedding_dim=300, hidden_dim=168, vocab_size=300, label_size=2, gpu_device=DEVICE)
+model.word_embeddings.weight.data = inputs.vocab.vectors
+model.cuda(device=DEVICE)
 loss_fn = nn.CrossEntropyLoss()
-opt = torch.optim.Adam(model.parameters(),lr=learning_rate)
+opt = torch.optim.Adam(model.parameters(),lr=0.001)
 
-for epoch in range(num_epochs):
-    print('epoch #%s [' % epoch,end='.')
-    i=0
-    
-    for _,batch in enumerate(train_iter):
+tqdm_epoch = tqdm(range(100), desc="Epoch")
+for epoch in tqdm_epoch:
+    train_iter.init_epoch()
+    tqdm_batch = tqdm(train_iter, desc="Batch")
+    for _,batch in tqdm_batch:
         # Clear gradient before each new instance
-        model.zero_grad()
-        log_probs = model(batch.text)
+        model.train()
+        opt.zero_grad()
+
+        log_probs = model(batch)
 
         # Compute the loss and gradients and update the parameters by opt.step()
         loss = loss_fn(log_probs, batch.label)
         loss.backward()
         opt.step()
-        
-        i += 1
-        if i % 50 == 0:
-            print('.',end='')
-    print(']')
 
+# Evaluate Logistic Regression
+print("Evaluating on test data")
+num_correct = 0
+model.eval()
+test_iter.init_epoch()
+for test_batch in test_iter:
+    answer = model(test_batch)
+    num_correct += (torch.max(answer, 1)[1].view(test_batch.label.size()).data == test_batch.label.data).sum()
 
-# ## Evaluate Logistic Regression
-
-# In[81]:
-
-
-correct = 0
-dev_loss = 0
-for idx, dev_batch in enumerate(dev_iter):
-    labels = dev_batch.label
-    prediction = model(dev_batch.text)
-    correct += (torch.max(prediction, 1)[1].view(dev_batch.label.size()).data == dev_batch.label.data).sum()
-    dev_loss = loss_fn(prediction, dev_batch.label)
-dev_acc = 100. * correct / len(devBOW)
-
-
-# In[82]:
-
-
-print(dev_acc)
-
-
-# In[316]:
-
-
-# Step 5: Validate
-   logloss = 0
-   for _, batch in enumerate(dev_iter):
-       log_probs = model(batch.text.data)
-       logloss += loss_fn(log_probs,batch.label.data)
-   print("Test log loss: " % )
-   
-   
-# Validate
-for _, batch in enumerate(dev_iter):
-   log_probs = model(batch.text)
-   loss = loss_fn()
-   print(log_probs)
-   
-# CODE FROM PAPER
-# calculate accuracy on validation set
-n_dev_correct, dev_loss = 0, 0
-for dev_batch_idx, dev_batch in enumerate(dev_iter):
-    answer = model(dev_batch)
-    n_dev_correct += (torch.max(answer, 1)[1].view(dev_batch.label.size()).data == dev_batch.label.data).sum()
-    dev_loss = criterion(answer, dev_batch.label)
-dev_acc = 100. * n_dev_correct / len(dev)
-
-
-
-# In[255]:
-
-
-b.text.data
-
+test_acc = 100. * num_correct / len(test)
+print("Test accuracy: {}".format(test_acc))
