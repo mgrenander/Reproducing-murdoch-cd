@@ -32,8 +32,10 @@ def CD(batch, model, start, stop):
     
     W_ii, W_if, W_ig, W_io = np.split(weights['weight_ih_l0'], 4, 0)
     W_hi, W_hf, W_hg, W_ho = np.split(weights['weight_hh_l0'], 4, 0)
-    W_out = model.hidden_to_label.weight.data
+    W_out = model.hidden2label.weight.data
     b_i, b_f, b_g, b_o = np.split(weights['bias_ih_l0'].cpu().numpy() + weights['bias_hh_l0'].cpu().numpy(), 4)
+
+    # The second axis is garbage, we remove it. Resulting matrix is of size (#words) x (length of glove vector, 300)
     word_vecs = model.word_embeddings(batch.text)[:,0].data
     
     L = word_vecs.size(0)
