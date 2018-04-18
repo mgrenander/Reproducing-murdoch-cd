@@ -1,7 +1,7 @@
 from ContextualDecomposition import CD
 import torch
 from torchtext import data, datasets
-
+import numpy as np
 
 def filter_neg(example):
     pass
@@ -19,7 +19,7 @@ inputs.build_vocab(train, dev, test, vectors="glove.6B.100d")
 answers.build_vocab(train)
 vocab = inputs.vocab
 
-ok = [vocab.stoi[i] for i in test[0].text]
+ok = torch.from_numpy(np.array([vocab.stoi[i] for i in test[0].text]))
 print(CD(ok, model, 0, len(ok)-1))
 
 
