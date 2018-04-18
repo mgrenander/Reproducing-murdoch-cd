@@ -27,7 +27,7 @@ def linearize_tanh(a, b):
     b_contrib = 0.5 * (np.tanh(b) + np.tanh(a + b) - np.tanh(a))
     return a_contrib, b_contrib
 
-def CD(batch, model, start, stop):
+def CD(review, model, start, stop):
     weights = model.lstm.state_dict()
     
     W_ii, W_if, W_ig, W_io = np.split(weights['weight_ih_l0'], 4, 0)
@@ -36,7 +36,7 @@ def CD(batch, model, start, stop):
     b_i, b_f, b_g, b_o = np.split(weights['bias_ih_l0'].cpu().numpy() + weights['bias_hh_l0'].cpu().numpy(), 4)
 
     # The second axis is garbage, we remove it. Resulting matrix is of size (#words) x (length of glove vector, 300)
-    word_vecs = model.word_embeddings(batch.text)[:,0].data
+    word_vecs = model.word_embeddings(review)[:,0].data
     
     L = word_vecs.size(0)
     phrase = np.zeros((L, model.hidden_dim))  #phrase contribution
