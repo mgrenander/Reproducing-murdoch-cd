@@ -95,10 +95,13 @@ inputs.build_vocab(train, dev, test, vectors="glove.6B.100d")
 answers.build_vocab(train)
 vocab = inputs.vocab
 
-ok = inputs.numericalize([train[0].text], device=-1, train=False)
 # ok = inputs.numericalize([test[0].text], device=-1, train=False) ## Why does this not work???
 
+print("Filtering data")
 pos, neg, neut = parseTrees(train)
 pos_hist = get_cd_scores(pos, model, "pos")
 neg_hist = get_cd_scores(neg, model, "neg")
 neut_hist = get_cd_scores(neut, model, "neut")
+print(pos_hist)
+print(neg_hist)
+print(neut_hist)
