@@ -3,6 +3,7 @@ import torch
 from torchtext import data, datasets
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 def rolling_window(phrase, sub):
     for i in range(phrase.shape[0]):
@@ -109,7 +110,7 @@ def parseTrees(train):
                 phrases.append((phrase, sc, 0))
             elif scnn != -1 and phrase.label != "neutral":
                 phrases.append((phrase, train[scnn], 0))
-        elif sw in negation_words and sw in fc.text: # Second word is in negation words (and in first child)
+        elif sw in negation_words: # Second word is in negation words
             scnn = sc_find_nneut(train, i)
             if sc.label != "neutral":
                 phrases.append((phrase, sc, 1))
@@ -148,16 +149,18 @@ inputs.build_vocab(train, dev, test, vectors="glove.6B.100d")
 answers.build_vocab(train)
 vocab = inputs.vocab
 
-# ok = inputs.numericalize([test[0].text], device=-1, train=False) ## Why does this not work???
-
 print("Parsing trees")
 p, n, a = parseTrees(train)
 print("Computing CD scores")
 p_scores = get_cd_scores(p, model)
 n_scores = get_cd_scores(n, model)
 a_scores = get_cd_scores(a, model)
+print("Plotting results")
 
-plt.hist(p_scores)
-plt.hist(n_scores)
-plt.hist(a_scores)
-plt.savefig('negation.png')
+fig, ax = plt.subplots()
+sns.distplot(p_scores, hist=False, color='blue', kde_kws={"shade":True}, ax=ax, label="Positive")
+sns.distplot(n_scores, hist=False, color='green', kde_kws={"shade":True}, ax=ax, label="Negative")
+sns.distplot(a_scores, hist=False, color='red', kde_kws={"shade":True}, ax=ax, label="All")
+
+ax.set(xlabel='Contextual Decomposition Score', ylabel='Density')
+ax.set_title('Contextual Decomposition for Negation Phrases')
