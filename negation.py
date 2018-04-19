@@ -164,3 +164,7 @@ sns.distplot(a_scores, hist=False, color='red', kde_kws={"shade":True}, ax=ax, l
 
 ax.set(xlabel='Contextual Decomposition Score', ylabel='Density')
 ax.set_title('Contextual Decomposition for Negation Phrases')
+
+fig = ax.get_figure()
+fig.savefig('negation.png')
+
