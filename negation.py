@@ -2,30 +2,25 @@ from ContextualDecomposition import CD
 import torch
 from torchtext import data, datasets
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 def rolling_window(phrase, sub):
-    tups = []
     for i in range(phrase.shape[0]):
-        if i + len(sub) > phrase.shape[0]:
-            break
-        else:
-            if np.array_equal(phrase[i:i+len(sub)], sub):
-                tups.append((i, i+len(sub)-1))
-    return tups
+        if np.array_equal(phrase[i:i+len(sub)], sub):
+            return i, i+len(sub)-1
+    return -1  # Error!
 
 
 def format_indices(ls):
     formatted_ls = []
     for tup in ls:
         phrase = inputs.numericalize([tup[0].text], device=-1, train=False)
-        subphrases = [inputs.numericalize([sub.text], device=-1, train=False) for sub in tup[1]]
-        np_phrase = phrase.data.numpy()
-        idx_tups = []
-        for sub in subphrases:
-            np_sub = sub.data.numpy()
-            idx_tups += rolling_window(np_phrase, np_sub)
-        formatted_ls.append((phrase, idx_tups))
+        subphrase = inputs.numericalize([tup[1].text], device=-1, train=False)
+        idx_tup = rolling_window(phrase.data.numpy(), subphrase.data.numpy())
+        if idx_tup == -1:
+            raise ValueError("Could not find subphrase in phrase!")
+        else:
+            formatted_ls.append((phrase, idx_tup, tup[2]))
     return formatted_ls
 
 
@@ -35,7 +30,7 @@ def filterTrees(trees):
     all_trees = []
     for tree in trees:
         all_trees.append(tree)
-        phrase, subs = tree
+        phrase, _, _ = tree
         if phrase.label == 'positive':
             pos_trees.append(tree)
         elif phrase.label == 'negative':
@@ -60,8 +55,10 @@ def get_first_child(train, i):
 
 
 def get_second_child(train, i):
-    first_child = train[i+1]
-    sub = train[i+2]
+    i += 1
+    first_child = train[i]
+    i += 1
+    sub = train[i]
     while set(sub.text).issubset(set(first_child.text)):
         i+= 1
         sub = train[i]
@@ -92,31 +89,34 @@ def sc_find_nneut(train, i):
     return -1
 
 def parseTrees(train):
+    print("Filtering trees")
     negation_words = ["not", "n't", "lacks", "nobody", "nor", "nothing", "neither", "never", "none", "nowhere", "remotely"]
-    phrases = []
+    phrases = []  # Format: [(sentence, phrase being negated, negation term index)]
     i = 0
     while i < len(train):
         phrase = train[i]
-        if len(phrase) >= 10:  # Phrase is too long
+        if len(phrase.text) >= 10:  # Phrase is too long
             i = get_next_tree(train, i)
             continue
-        fc = train[get_first_child(train, i)]
-        sc = train[get_second_child(train, i)]
-        fw = train[get_next_word(train, i)]
-        sw = train[get_next_word(train, fw)]
-        if fw.text in negation_words:
+        fc = train[get_first_child(train, i)]  # First child
+        sc = train[get_second_child(train, i)]  # Second child
+        fw_idx = get_next_word(train, i)  # Index for first word
+        fw = train[fw_idx].text[0]  # First word
+        sw = train[get_next_word(train, fw_idx)].text[0]  # Second word
+        if fw in negation_words:  # First word is in negation words
             scnn = sc_find_nneut(train, i)
             if sc.label != "neutral":
-                phrases.append((phrase, sc, fw))
-            if scnn != -1:
-                phrases.append((phrase, train[scnn], fw))
-        elif sw.text in negation_words and sw.text in fc.text:
+                phrases.append((phrase, sc, 0))
+            elif scnn != -1 and phrase.label != "neutral":
+                phrases.append((phrase, train[scnn], 0))
+        elif sw in negation_words and sw in fc.text: # Second word is in negation words (and in first child)
             scnn = sc_find_nneut(train, i)
             if sc.label != "neutral":
-                phrases.append((phrase, sc, sw))
-            elif scnn != -1:
-                phrases.append((phrase, train[scnn], sw))
-    print("Filtering parsed trees")
+                phrases.append((phrase, sc, 1))
+            elif scnn != -1 and phrase.label != "neutral":
+                phrases.append((phrase, train[scnn], 1))
+        i = get_next_tree(train, i)
+    print("Sorting trees by label")
     pos, neg, all = filterTrees(phrases)
     print("Formatting indices")
     pos = format_indices(pos)
@@ -125,20 +125,15 @@ def parseTrees(train):
     return pos, neg, all
 
 
-def get_cd_scores(trees, model, label):
+def get_cd_scores(trees, model):
     hist = []
     for tree in trees:
-        phrase, tups = tree
-        for start, stop in tups:
-            score_array = CD(phrase, model, start, stop)
-            if label == "pos":
-                score = score_array[0] - score_array[1]
-            elif label == "neg":
-                score = score_array[0] - score_array[1]
-            else:
-                score = np.max(score_array, axis=1)
-
-            hist.append(score)
+        phrase, (start, stop), neg_word_id = tree
+        phrase_score, _ = CD(phrase, model, 0, len(phrase)-1)
+        sub_score, _ = CD(phrase, model, start, stop)
+        neg_score, _ = CD(phrase, model, neg_word_id, neg_word_id)
+        final_score = phrase_score - sub_score - neg_score
+        hist.append(final_score[0] - final_score[1])
     return hist
 
 # Load model and data
@@ -156,11 +151,13 @@ vocab = inputs.vocab
 # ok = inputs.numericalize([test[0].text], device=-1, train=False) ## Why does this not work???
 
 print("Parsing trees")
-pos, neg, neut = parseTrees(train)
+p, n, a = parseTrees(train)
 print("Computing CD scores")
-pos_hist = get_cd_scores(pos, model, "pos")
-neg_hist = get_cd_scores(neg, model, "neg")
-neut_hist = get_cd_scores(neut, model, "neut")
-print(pos_hist)
-print(neg_hist)
-print(neut_hist)
+p_scores = get_cd_scores(p, model)
+n_scores = get_cd_scores(n, model)
+a_scores = get_cd_scores(a, model)
+
+plt.hist(p_scores)
+plt.hist(n_scores)
+plt.hist(a_scores)
+plt.show()
