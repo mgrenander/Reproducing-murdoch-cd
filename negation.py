@@ -30,11 +30,15 @@ def format_indices(ls):
 
 
 def filterTrees(trees):
+    negation_words = ["not", "n't", "lacks", "nobody", "nor", "nothing", "neither", "never", "none", "nowhere", "remotely"]
     pos_trees = []
     neg_trees = []
     neut_trees = []
     for tree in trees:
         phrase, subs = tree
+        if len(phrase.text) >= 10: # Only care about phrases with length < 10
+            continue
+
         if phrase.label == 'positive':
             pos_trees.append(tree)
         elif phrase.label == 'neutral':
@@ -59,7 +63,9 @@ def parseTrees(train):
                 break
             sub = train[i]
         phrases.append((phrase, subs))
+    print("Filtering parsed trees")
     pos, neg, neut = filterTrees(phrases)
+    print("Formatting indices")
     pos = format_indices(pos)
     neg = format_indices(neg)
     neut = format_indices(neut)
@@ -97,8 +103,9 @@ vocab = inputs.vocab
 
 # ok = inputs.numericalize([test[0].text], device=-1, train=False) ## Why does this not work???
 
-print("Filtering data")
+print("Parsing trees")
 pos, neg, neut = parseTrees(train)
+print("Computing CD scores")
 pos_hist = get_cd_scores(pos, model, "pos")
 neg_hist = get_cd_scores(neg, model, "neg")
 neut_hist = get_cd_scores(neut, model, "neut")
