@@ -30,11 +30,15 @@ def format_indices(ls):
 
 
 def filterTrees(trees):
+    negation_words = ["not", "n't", "lacks", "nobody", "nor", "nothing", "neither", "never", "none", "nowhere", "remotely"]
     pos_trees = []
     neg_trees = []
     neut_trees = []
     for tree in trees:
         phrase, subs = tree
+        if len(phrase.text) >= 10: # Only care about phrases with length < 10
+            continue
+
         if phrase.label == 'positive':
             pos_trees.append(tree)
         elif phrase.label == 'neutral':
@@ -47,23 +51,43 @@ def filterTrees(trees):
 def parseTrees(train):
     phrases = []
     i = 0  # index where we put phrase in phrases
-    while i <= len(train):
+    while i < len(train):
         phrase = train[i]
         i += 1
-
         subs = []
         sub = train[i]
         while set(sub.text).issubset(set(phrase.text)):
             subs.append(sub)
             i += 1
+            if i >= len(train):
+                break
             sub = train[i]
         phrases.append((phrase, subs))
-
+    print("Filtering parsed trees")
     pos, neg, neut = filterTrees(phrases)
+    print("Formatting indices")
     pos = format_indices(pos)
     neg = format_indices(neg)
     neut = format_indices(neut)
     return pos, neg, neut
+
+
+def get_cd_scores(trees, model, label):
+    hist = []
+    for tree in trees:
+        phrase, tups = tree
+        for start, stop in tups:
+            score_array = CD(phrase, model, start, stop)
+
+            if label == "pos":
+                score = score_array[0]
+            elif label == "neg":
+                score = score_array[1]
+            else:
+                score = np.max(score_array, axis=1)
+
+            hist.append(score)
+    return hist
 
 # Load model and data
 print("Loading model")
@@ -77,7 +101,14 @@ inputs.build_vocab(train, dev, test, vectors="glove.6B.100d")
 answers.build_vocab(train)
 vocab = inputs.vocab
 
+# ok = inputs.numericalize([test[0].text], device=-1, train=False) ## Why does this not work???
 
-ok = inputs.numericalize([test[0].text], device=-1, train=False)
-print(CD(ok, model, 0, len(ok)-1))
-print(CD(ok, model, 0, len(ok)-1))
+print("Parsing trees")
+pos, neg, neut = parseTrees(train)
+print("Computing CD scores")
+pos_hist = get_cd_scores(pos, model, "pos")
+neg_hist = get_cd_scores(neg, model, "neg")
+neut_hist = get_cd_scores(neut, model, "neut")
+print(pos_hist)
+print(neg_hist)
+print(neut_hist)
