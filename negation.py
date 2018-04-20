@@ -98,7 +98,7 @@ def parseTrees(train):
     i = 0
     while i < len(train):
         phrase = train[i]
-        if len(phrase.text) > 10:  # Phrase is too long
+        if len(phrase.text) > 13:  # Phrase is too long
             i = get_next_tree(train, i)
             continue
         fc = train[get_first_child(train, i)]  # First child
