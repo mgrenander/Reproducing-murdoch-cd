@@ -167,9 +167,9 @@ print(len(n))
 print(len(a))
 
 print("Computing CD scores")
-p_scores = get_cd_scores(p, model)
-n_scores = get_cd_scores(n, model)
-a_scores = get_cd_scores(a, model)
+p_scores = np.array(get_cd_scores(p, model))
+n_scores = np.array(get_cd_scores(n, model))
+a_scores = np.array(get_cd_scores(a, model))
 print("Plotting results")
 
 _, ax = plt.subplots()
