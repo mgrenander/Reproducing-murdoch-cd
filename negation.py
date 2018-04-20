@@ -173,9 +173,9 @@ a_scores = get_cd_scores(a, model)
 print("Plotting results")
 
 _, ax = plt.subplots()
-sns.distplot(p_scores, hist=False, color='blue', kde_kws={"shade": True}, ax=ax, label="Positive")
-sns.distplot(n_scores, hist=False, color='green', kde_kws={"shade": True}, ax=ax, label="Negative")
-sns.distplot(a_scores, hist=False, color='red', kde_kws={"shade": True}, ax=ax, label="All")
+sns.kdeplot(p_scores, color='blue', shade=True, ax=ax, label="Positive")
+sns.kdeplot(n_scores, color='green', shade=True, ax=ax, label="Negative")
+sns.kdeplot(a_scores, color='red', shade=True, ax=ax, label="All")
 
 ax.set(xlabel='Contextual Decomposition Score', ylabel='Density')
 ax.set_title('Contextual Decomposition for Negation Phrases')
