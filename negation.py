@@ -96,7 +96,7 @@ def parseTrees(train):
     i = 0
     while i < len(train):
         phrase = train[i]
-        if len(phrase.text) >= 10:  # Phrase is too long
+        if len(phrase.text) > 10:  # Phrase is too long
             i = get_next_tree(train, i)
             continue
         fc = train[get_first_child(train, i)]  # First child
@@ -151,13 +151,18 @@ vocab = inputs.vocab
 
 print("Parsing trees")
 p, n, a = parseTrees(train)
+
+print(len(p))
+print(len(n))
+print(len(a))
+
 print("Computing CD scores")
 p_scores = get_cd_scores(p, model)
 n_scores = get_cd_scores(n, model)
 a_scores = get_cd_scores(a, model)
 print("Plotting results")
 
-fig, ax = plt.subplots()
+_, ax = plt.subplots()
 sns.distplot(p_scores, hist=False, color='blue', kde_kws={"shade":True}, ax=ax, label="Positive")
 sns.distplot(n_scores, hist=False, color='green', kde_kws={"shade":True}, ax=ax, label="Negative")
 sns.distplot(a_scores, hist=False, color='red', kde_kws={"shade":True}, ax=ax, label="All")
