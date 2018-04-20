@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+
 def rolling_window(phrase, sub):
     for i in range(phrase.shape[0]):
         if np.array_equal(phrase[i:i+len(sub)], sub):
@@ -44,7 +45,7 @@ def get_next_tree(train, i):
     i += 1
     sub = train[i]
     while set(sub.text).issubset(set(phrase.text)):
-        i+=1
+        i += 1
         if i >= len(train):
             break
         sub = train[i]
@@ -61,7 +62,7 @@ def get_second_child(train, i):
     i += 1
     sub = train[i]
     while set(sub.text).issubset(set(first_child.text)):
-        i+= 1
+        i += 1
         sub = train[i]
     return i
 
@@ -69,7 +70,7 @@ def get_second_child(train, i):
 def get_next_word(train, i):
     sub = train[i+1]
     while len(sub.text) != 1:
-        i+=1
+        i += 1
         sub = train[i]
     return i
 
@@ -89,6 +90,7 @@ def sc_find_nneut(train, i):
         sub = train[j]
     return -1
 
+
 def parseTrees(train):
     print("Filtering trees")
     negation_words = ["not", "n't", "lacks", "nobody", "nor", "nothing", "neither", "never", "none", "nowhere", "remotely"]
@@ -103,19 +105,27 @@ def parseTrees(train):
         sc = train[get_second_child(train, i)]  # Second child
         fw_idx = get_next_word(train, i)  # Index for first word
         fw = train[fw_idx].text[0]  # First word
-        sw = train[get_next_word(train, fw_idx)].text[0]  # Second word
+        sw_idx = get_next_word(train, fw_idx)  # Index for second word
+        sw = train[sw_idx].text[0]  # Second word
+        tw = train[get_next_word(train, sw_idx)]  # Third word
         if fw in negation_words:  # First word is in negation words
             scnn = sc_find_nneut(train, i)
             if sc.label != "neutral":
                 phrases.append((phrase, sc, 0))
             elif scnn != -1 and phrase.label != "neutral":
                 phrases.append((phrase, train[scnn], 0))
-        elif sw in negation_words: # Second word is in negation words
+        elif sw in negation_words:  # Second word is in negation words
             scnn = sc_find_nneut(train, i)
             if sc.label != "neutral":
                 phrases.append((phrase, sc, 1))
             elif scnn != -1 and phrase.label != "neutral":
                 phrases.append((phrase, train[scnn], 1))
+        elif tw in negation_words:  # Third word in negation words
+            scnn = sc_find_nneut(train, i)
+            if sc.label != "neutral":
+                phrases.append((phrase, sc, 2))
+            elif scnn != -1 and phrase.label != "neutral":
+                phrases.append((phrase, train[scnn], 2))
         i = get_next_tree(train, i)
     print("Sorting trees by label")
     pos, neg, all = filterTrees(phrases)
@@ -163,13 +173,12 @@ a_scores = get_cd_scores(a, model)
 print("Plotting results")
 
 _, ax = plt.subplots()
-sns.distplot(p_scores, hist=False, color='blue', kde_kws={"shade":True}, ax=ax, label="Positive")
-sns.distplot(n_scores, hist=False, color='green', kde_kws={"shade":True}, ax=ax, label="Negative")
-sns.distplot(a_scores, hist=False, color='red', kde_kws={"shade":True}, ax=ax, label="All")
+sns.distplot(p_scores, hist=False, color='blue', kde_kws={"shade": True}, ax=ax, label="Positive")
+sns.distplot(n_scores, hist=False, color='green', kde_kws={"shade": True}, ax=ax, label="Negative")
+sns.distplot(a_scores, hist=False, color='red', kde_kws={"shade": True}, ax=ax, label="All")
 
 ax.set(xlabel='Contextual Decomposition Score', ylabel='Density')
 ax.set_title('Contextual Decomposition for Negation Phrases')
 
 fig = ax.get_figure()
 fig.savefig('negation.png')
-
